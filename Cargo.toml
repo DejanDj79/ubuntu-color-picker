@@ -1,0 +1,11 @@
+[package]
+name = "ubuntu-color-picker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.9" }
+adw = { package = "libadwaita", version = "0.7" }
+ashpd = { version = "0.13", features = ["screenshot"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+anyhow = "1"

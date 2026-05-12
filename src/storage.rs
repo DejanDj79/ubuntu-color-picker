@@ -66,6 +66,12 @@ impl ColorCollections {
         true
     }
 
+    pub fn remove_favorite(&mut self, color: Rgb) {
+        if let Some(index) = self.favorites.iter().position(|saved| *saved == color) {
+            self.favorites.remove(index);
+        }
+    }
+
     pub fn is_favorite(&self, color: Rgb) -> bool {
         self.favorites.contains(&color)
     }

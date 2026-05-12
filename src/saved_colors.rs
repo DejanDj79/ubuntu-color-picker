@@ -11,7 +11,7 @@ pub struct SavedColorsPanel {
     storage: Rc<RefCell<ColorCollections>>,
     current_color: Rc<Cell<Rgb>>,
     popover: Popover,
-    toggle_button: Button,
+    favorite_button: Button,
     favorites_box: gtk::Box,
     recent_box: gtk::Box,
     copy_feedback: CopyFeedback,
@@ -23,6 +23,7 @@ impl SavedColorsPanel {
         popover: Popover,
         storage: Rc<RefCell<ColorCollections>>,
         current_color: Rc<Cell<Rgb>>,
+        favorite_button: Button,
         copy_feedback: CopyFeedback,
         on_select: Rc<dyn Fn(Rgb)>,
     ) -> Self {
@@ -37,9 +38,6 @@ impl SavedColorsPanel {
 
         root.add_css_class("saved-colors-root");
 
-        let toggle_button = Button::builder().halign(Align::Fill).build();
-        toggle_button.add_css_class("saved-favorite-toggle");
-
         let favorites_label = section_label("Favorites");
         let favorites_box = gtk::Box::builder()
             .orientation(Orientation::Vertical)
@@ -52,7 +50,6 @@ impl SavedColorsPanel {
             .spacing(4)
             .build();
 
-        root.append(&toggle_button);
         root.append(&favorites_label);
         root.append(&favorites_box);
         root.append(&recent_label);
@@ -63,7 +60,7 @@ impl SavedColorsPanel {
             storage,
             current_color,
             popover,
-            toggle_button,
+            favorite_button,
             favorites_box,
             recent_box,
             copy_feedback,
@@ -72,8 +69,8 @@ impl SavedColorsPanel {
 
         {
             let panel = panel.clone();
-            let toggle_button = panel.toggle_button.clone();
-            toggle_button.connect_clicked(move |_| {
+            let favorite_button = panel.favorite_button.clone();
+            favorite_button.connect_clicked(move |_| {
                 panel.toggle_current_favorite();
             });
         }
@@ -82,7 +79,7 @@ impl SavedColorsPanel {
         panel
     }
 
-    pub fn record_color(&self, color: Rgb) {
+    pub fn record_recent(&self, color: Rgb) {
         self.current_color.set(color);
 
         {
@@ -99,7 +96,7 @@ impl SavedColorsPanel {
         self.refresh();
     }
 
-    fn toggle_current_favorite(&self) {
+    pub fn toggle_current_favorite(&self) {
         let color = self.current_color.get();
 
         {
@@ -111,14 +108,29 @@ impl SavedColorsPanel {
         self.refresh();
     }
 
+    fn remove_favorite(&self, color: Rgb) {
+        {
+            let mut storage = self.storage.borrow_mut();
+            storage.remove_favorite(color);
+            storage.save();
+        }
+
+        self.refresh();
+    }
+
     fn refresh(&self) {
         let current = self.current_color.get();
         let storage = self.storage.borrow();
 
         if storage.is_favorite(current) {
-            self.toggle_button.set_label("Remove favorite");
+            self.favorite_button
+                .set_tooltip_text(Some("Remove favorite"));
+            self.favorite_button.add_css_class("favorite-active");
+            set_button_icon(&self.favorite_button, "starred-symbolic");
         } else {
-            self.toggle_button.set_label("Add favorite");
+            self.favorite_button.set_tooltip_text(Some("Add favorite"));
+            self.favorite_button.remove_css_class("favorite-active");
+            set_button_icon(&self.favorite_button, "non-starred-symbolic");
         }
 
         populate_color_list(
@@ -126,24 +138,31 @@ impl SavedColorsPanel {
             storage.favorites(),
             "No favorites yet",
             self.clone(),
+            true,
         );
         populate_color_list(
             &self.recent_box,
             storage.recent(),
             "No recent colors yet",
             self.clone(),
+            false,
         );
     }
 
     fn select_color(&self, color: Rgb) {
         (self.on_select)(color);
-        self.record_color(color);
+        self.record_recent(color);
         self.popover.popdown();
     }
 
     fn copy_color(&self, source: &Button, color: Rgb) {
         copy_color(source, &self.copy_feedback, color, CopyFormat::Hex);
     }
+}
+
+fn set_button_icon(button: &Button, icon_name: &str) {
+    let icon = gtk::Image::from_icon_name(icon_name);
+    button.set_child(Some(&icon));
 }
 
 fn section_label(label: &str) -> Label {
@@ -162,6 +181,7 @@ fn populate_color_list(
     colors: &[Rgb],
     empty_text: &str,
     panel: SavedColorsPanel,
+    can_remove: bool,
 ) {
     while let Some(child) = container.first_child() {
         container.remove(&child);
@@ -179,11 +199,11 @@ fn populate_color_list(
     }
 
     for color in colors {
-        container.append(&color_row(*color, panel.clone()));
+        container.append(&color_row(*color, panel.clone(), can_remove));
     }
 }
 
-fn color_row(color: Rgb, panel: SavedColorsPanel) -> gtk::Box {
+fn color_row(color: Rgb, panel: SavedColorsPanel, can_remove: bool) -> gtk::Box {
     let row = gtk::Box::builder()
         .orientation(Orientation::Horizontal)
         .spacing(6)
@@ -252,5 +272,27 @@ fn color_row(color: Rgb, panel: SavedColorsPanel) -> gtk::Box {
 
     row.append(&select_button);
     row.append(&copy_button);
+
+    if can_remove {
+        let delete_button = Button::builder()
+            .width_request(30)
+            .height_request(30)
+            .tooltip_text("Remove favorite")
+            .build();
+
+        let delete_icon = gtk::Image::from_icon_name("edit-delete-symbolic");
+        delete_button.set_child(Some(&delete_icon));
+        delete_button.add_css_class("saved-color-delete");
+
+        {
+            let panel = panel.clone();
+            delete_button.connect_clicked(move |_| {
+                panel.remove_favorite(color);
+            });
+        }
+
+        row.append(&delete_button);
+    }
+
     row
 }

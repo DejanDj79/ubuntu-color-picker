@@ -107,11 +107,16 @@ fn build_ui(app: &adw::Application) {
 
     let picker_btn = icon_button("color-select-symbolic", "Pick color");
     let sliders_btn = icon_button("view-list-symbolic", "RGB sliders");
+    let favorite_btn = icon_button("non-starred-symbolic", "Add favorite");
     let saved_popover = gtk::Popover::builder()
         .autohide(true)
         .has_arrow(true)
         .build();
-    let book_btn = menu_icon_button("starred-symbolic", "History and favorites", &saved_popover);
+    let saved_btn = menu_icon_button(
+        "document-open-recent-symbolic",
+        "History and favorites",
+        &saved_popover,
+    );
     let copy_feedback = CopyFeedback::new(&copy_toast, &copy_toast_label);
     let copy_action: Rc<dyn Fn(CopyFormat)> = {
         let color_state = color_state.clone();
@@ -128,7 +133,8 @@ fn build_ui(app: &adw::Application) {
 
     top_bar.append(&picker_btn);
     top_bar.append(&sliders_btn);
-    top_bar.append(&book_btn);
+    top_bar.append(&favorite_btn);
+    top_bar.append(&saved_btn);
     top_bar.append(&copy_btn);
     top_bar.append(&settings_btn);
 
@@ -253,6 +259,7 @@ fn build_ui(app: &adw::Application) {
             saved_popover.clone(),
             collections.clone(),
             current_color.clone(),
+            favorite_btn.clone(),
             copy_feedback.clone(),
             Rc::new(move |color| {
                 apply_selected_color(
@@ -423,7 +430,7 @@ fn build_ui(app: &adw::Application) {
                             &hex_entry,
                             &css_provider,
                         );
-                        saved_panel.record_color(color);
+                        saved_panel.record_recent(color);
                     }
                     Err(error) => {
                         hex_entry.set_text(&format!("Error: {}", error));
@@ -505,7 +512,7 @@ fn connect_rgb_entry(
             &hex_entry,
             &css_provider,
         );
-        saved_panel.record_color(color);
+        saved_panel.set_current(color);
 
         restore_entry_position(entry, cursor_position);
     });
@@ -555,7 +562,7 @@ fn connect_hex_entry(
             &hex_entry,
             &css_provider,
         );
-        saved_panel.record_color(color);
+        saved_panel.set_current(color);
 
         restore_entry_position(entry, cursor_position);
     });
@@ -609,7 +616,7 @@ fn connect_slider(
             &hex_entry,
             &css_provider,
         );
-        saved_panel.record_color(color);
+        saved_panel.set_current(color);
     });
 }
 

@@ -54,6 +54,10 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             background: rgba(255,255,255,0.16);
         }}
 
+        .toolbar-button.favorite-active {{
+            background: rgba(255,255,255,0.22);
+        }}
+
         .channel-label {{
             font-weight: 700;
             color: {};
@@ -99,11 +103,6 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             min-width: 230px;
         }}
 
-        .saved-favorite-toggle {{
-            border-radius: 6px;
-            padding: 7px 10px;
-        }}
-
         .saved-section-label {{
             font-size: 11px;
             font-weight: 800;
@@ -116,14 +115,16 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         }}
 
         .saved-color-button,
-        .saved-color-copy {{
+        .saved-color-copy,
+        .saved-color-delete {{
             border-radius: 6px;
             background: transparent;
             padding: 4px 7px;
         }}
 
         .saved-color-button:hover,
-        .saved-color-copy:hover {{
+        .saved-color-copy:hover,
+        .saved-color-delete:hover {{
             background: rgba(128,128,128,0.16);
         }}
 

@@ -1091,6 +1091,8 @@ dependencies = [
  "ashpd",
  "gtk4",
  "libadwaita",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

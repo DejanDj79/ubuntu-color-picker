@@ -1,16 +1,20 @@
 mod clipboard;
 mod color;
+mod saved_colors;
+mod storage;
 mod style;
 mod widgets;
 
 use adw::prelude::*;
 use ashpd::desktop::Color;
 use gtk::{glib, Entry, Orientation, Scale};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use clipboard::{copy_color, CopyFeedback};
 use color::{parse_rgb_channel, CopyFormat, Rgb};
+use saved_colors::SavedColorsPanel;
+use storage::ColorCollections;
 use style::load_css;
 use widgets::{
     copy_format_popover, copy_toast, icon_button, make_hex_entry, make_scale, make_value_entry,
@@ -68,6 +72,8 @@ async fn main() {
 
 fn build_ui(app: &adw::Application) {
     let color_state = ColorState::new(INITIAL_COLOR);
+    let current_color = Rc::new(Cell::new(INITIAL_COLOR));
+    let collections = Rc::new(RefCell::new(ColorCollections::load()));
 
     let window = adw::ApplicationWindow::builder()
         .application(app)
@@ -101,7 +107,11 @@ fn build_ui(app: &adw::Application) {
 
     let picker_btn = icon_button("color-select-symbolic", "Pick color");
     let sliders_btn = icon_button("view-list-symbolic", "RGB sliders");
-    let book_btn = icon_button("starred-symbolic", "Favorites");
+    let saved_popover = gtk::Popover::builder()
+        .autohide(true)
+        .has_arrow(true)
+        .build();
+    let book_btn = menu_icon_button("starred-symbolic", "History and favorites", &saved_popover);
     let copy_feedback = CopyFeedback::new(&copy_toast, &copy_toast_label);
     let copy_action: Rc<dyn Fn(CopyFormat)> = {
         let color_state = color_state.clone();
@@ -225,6 +235,44 @@ fn build_ui(app: &adw::Application) {
 
     load_css(&css_provider, color_state.get());
 
+    let saved_panel = {
+        let color_state = color_state.clone();
+
+        let r_scale = r_scale.clone();
+        let g_scale = g_scale.clone();
+        let b_scale = b_scale.clone();
+
+        let r_entry = r_entry.clone();
+        let g_entry = g_entry.clone();
+        let b_entry = b_entry.clone();
+        let hex_entry = hex_entry.clone();
+
+        let css_provider = css_provider.clone();
+
+        SavedColorsPanel::new(
+            saved_popover.clone(),
+            collections.clone(),
+            current_color.clone(),
+            copy_feedback.clone(),
+            Rc::new(move |color| {
+                apply_selected_color(
+                    color,
+                    &color_state,
+                    &r_scale,
+                    &g_scale,
+                    &b_scale,
+                    &r_entry,
+                    &g_entry,
+                    &b_entry,
+                    &hex_entry,
+                    &css_provider,
+                );
+            }),
+        )
+    };
+
+    saved_panel.set_current(color_state.get());
+
     r_scale.set_value(INITIAL_COLOR.r as f64);
     g_scale.set_value(INITIAL_COLOR.g as f64);
     b_scale.set_value(INITIAL_COLOR.b as f64);
@@ -237,6 +285,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
         ColorChannel::Red,
     );
 
@@ -248,6 +297,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
         ColorChannel::Green,
     );
 
@@ -259,6 +309,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
         ColorChannel::Blue,
     );
 
@@ -273,6 +324,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
         ColorChannel::Red,
     );
 
@@ -287,6 +339,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
         ColorChannel::Green,
     );
 
@@ -301,6 +354,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
         ColorChannel::Blue,
     );
 
@@ -315,6 +369,7 @@ fn build_ui(app: &adw::Application) {
         b_entry.clone(),
         hex_entry.clone(),
         css_provider.clone(),
+        saved_panel.clone(),
     );
 
     {
@@ -330,6 +385,7 @@ fn build_ui(app: &adw::Application) {
         let hex_entry = hex_entry.clone();
 
         let css_provider = css_provider.clone();
+        let saved_panel = saved_panel.clone();
 
         picker_btn.connect_clicked(move |_| {
             let color_state = color_state.clone();
@@ -344,6 +400,7 @@ fn build_ui(app: &adw::Application) {
             let hex_entry = hex_entry.clone();
 
             let css_provider = css_provider.clone();
+            let saved_panel = saved_panel.clone();
 
             glib::MainContext::default().spawn_local(async move {
                 match Color::pick()
@@ -366,6 +423,7 @@ fn build_ui(app: &adw::Application) {
                             &hex_entry,
                             &css_provider,
                         );
+                        saved_panel.record_color(color);
                     }
                     Err(error) => {
                         hex_entry.set_text(&format!("Error: {}", error));
@@ -411,6 +469,7 @@ fn connect_rgb_entry(
     b_entry: Entry,
     hex_entry: Entry,
     css_provider: Rc<gtk::CssProvider>,
+    saved_panel: SavedColorsPanel,
     channel: ColorChannel,
 ) {
     entry.connect_changed(move |entry| {
@@ -420,9 +479,11 @@ fn connect_rgb_entry(
 
         let text = entry.text();
         let Some(value) = parse_rgb_channel(text.as_str()) else {
+            set_entry_error(entry, true);
             return;
         };
 
+        set_entry_error(entry, false);
         let cursor_position = entry.position();
         let mut color = color_state.get();
 
@@ -444,6 +505,7 @@ fn connect_rgb_entry(
             &hex_entry,
             &css_provider,
         );
+        saved_panel.record_color(color);
 
         restore_entry_position(entry, cursor_position);
     });
@@ -460,6 +522,7 @@ fn connect_hex_entry(
     b_entry: Entry,
     hex_entry: Entry,
     css_provider: Rc<gtk::CssProvider>,
+    saved_panel: SavedColorsPanel,
 ) {
     entry.connect_changed(move |entry| {
         if color_state.is_syncing() {
@@ -468,9 +531,11 @@ fn connect_hex_entry(
 
         let text = entry.text();
         let Some(color) = Rgb::from_hex_input(text.as_str()) else {
+            set_entry_error(entry, true);
             return;
         };
 
+        set_entry_error(entry, false);
         let cursor_offset = if text.trim_start().starts_with('#') {
             0
         } else {
@@ -490,9 +555,18 @@ fn connect_hex_entry(
             &hex_entry,
             &css_provider,
         );
+        saved_panel.record_color(color);
 
         restore_entry_position(entry, cursor_position);
     });
+}
+
+fn set_entry_error(entry: &Entry, has_error: bool) {
+    if has_error {
+        entry.add_css_class("input-error");
+    } else {
+        entry.remove_css_class("input-error");
+    }
 }
 
 fn restore_entry_position(entry: &Entry, position: i32) {
@@ -508,6 +582,7 @@ fn connect_slider(
     b_entry: Entry,
     hex_entry: Entry,
     css_provider: Rc<gtk::CssProvider>,
+    saved_panel: SavedColorsPanel,
     channel: ColorChannel,
 ) {
     scale.connect_value_changed(move |scale| {
@@ -534,6 +609,7 @@ fn connect_slider(
             &hex_entry,
             &css_provider,
         );
+        saved_panel.record_color(color);
     });
 }
 
@@ -582,6 +658,11 @@ fn update_fields(
     hex_entry: &Entry,
     css_provider: &gtk::CssProvider,
 ) {
+    set_entry_error(r_entry, false);
+    set_entry_error(g_entry, false);
+    set_entry_error(b_entry, false);
+    set_entry_error(hex_entry, false);
+
     r_entry.set_text(&color.r.to_string());
     g_entry.set_text(&color.g.to_string());
     b_entry.set_text(&color.b.to_string());

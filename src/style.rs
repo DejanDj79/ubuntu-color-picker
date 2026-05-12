@@ -90,6 +90,49 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             font-weight: 700;
         }}
 
+        entry.input-error {{
+            border-color: #ff4d4d;
+            box-shadow: inset 0 0 0 1px rgba(255,77,77,0.55);
+        }}
+
+        .saved-colors-root {{
+            min-width: 230px;
+        }}
+
+        .saved-favorite-toggle {{
+            border-radius: 6px;
+            padding: 7px 10px;
+        }}
+
+        .saved-section-label {{
+            font-size: 11px;
+            font-weight: 800;
+            opacity: 0.75;
+            margin-top: 4px;
+        }}
+
+        .saved-color-row {{
+            min-height: 30px;
+        }}
+
+        .saved-color-button,
+        .saved-color-copy {{
+            border-radius: 6px;
+            background: transparent;
+            padding: 4px 7px;
+        }}
+
+        .saved-color-button:hover,
+        .saved-color-copy:hover {{
+            background: rgba(128,128,128,0.16);
+        }}
+
+        .saved-empty-label {{
+            font-size: 11px;
+            opacity: 0.62;
+            padding: 3px 7px;
+        }}
+
         scale trough {{
             min-height: 8px;
             border-radius: 999px;

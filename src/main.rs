@@ -1,9 +1,60 @@
+mod clipboard;
+mod color;
+mod style;
+mod widgets;
+
 use adw::prelude::*;
 use ashpd::desktop::Color;
-use gtk::glib;
-use gtk::{Align, Button, Entry, Label, Orientation, Scale};
+use gtk::{glib, Entry, Orientation, Scale};
 use std::cell::Cell;
 use std::rc::Rc;
+
+use clipboard::{copy_color, CopyFeedback};
+use color::{parse_rgb_channel, CopyFormat, Rgb};
+use style::load_css;
+use widgets::{
+    copy_format_popover, copy_toast, icon_button, make_hex_entry, make_scale, make_value_entry,
+    menu_icon_button, slider_row, window_button,
+};
+
+const INITIAL_COLOR: Rgb = Rgb::new(50, 216, 122);
+
+#[derive(Clone)]
+struct ColorState {
+    red: Rc<Cell<u8>>,
+    green: Rc<Cell<u8>>,
+    blue: Rc<Cell<u8>>,
+    syncing: Rc<Cell<bool>>,
+}
+
+impl ColorState {
+    fn new(color: Rgb) -> Self {
+        Self {
+            red: Rc::new(Cell::new(color.r)),
+            green: Rc::new(Cell::new(color.g)),
+            blue: Rc::new(Cell::new(color.b)),
+            syncing: Rc::new(Cell::new(false)),
+        }
+    }
+
+    fn get(&self) -> Rgb {
+        Rgb::new(self.red.get(), self.green.get(), self.blue.get())
+    }
+
+    fn set(&self, color: Rgb) {
+        self.red.set(color.r);
+        self.green.set(color.g);
+        self.blue.set(color.b);
+    }
+
+    fn is_syncing(&self) -> bool {
+        self.syncing.get()
+    }
+
+    fn set_syncing(&self, syncing: bool) {
+        self.syncing.set(syncing);
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -16,6 +67,8 @@ async fn main() {
 }
 
 fn build_ui(app: &adw::Application) {
+    let color_state = ColorState::new(INITIAL_COLOR);
+
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .title("Color Picker")
@@ -30,6 +83,10 @@ fn build_ui(app: &adw::Application) {
 
     root.add_css_class("app-bg");
 
+    let overlay = gtk::Overlay::new();
+    let (copy_toast, copy_toast_label) = copy_toast();
+    overlay.add_overlay(&copy_toast);
+
     let top_bar = gtk::Box::builder()
         .orientation(Orientation::Horizontal)
         .spacing(6)
@@ -42,11 +99,21 @@ fn build_ui(app: &adw::Application) {
 
     top_bar.add_css_class("top-bar");
 
-
     let picker_btn = icon_button("color-select-symbolic", "Pick color");
     let sliders_btn = icon_button("view-list-symbolic", "RGB sliders");
     let book_btn = icon_button("starred-symbolic", "Favorites");
-    let copy_btn = icon_button("edit-copy-symbolic", "Copy color");
+    let copy_feedback = CopyFeedback::new(&copy_toast, &copy_toast_label);
+    let copy_action: Rc<dyn Fn(CopyFormat)> = {
+        let color_state = color_state.clone();
+        let copy_feedback = copy_feedback.clone();
+        let window = window.clone();
+
+        Rc::new(move |format| {
+            copy_color(&window, &copy_feedback, color_state.get(), format);
+        })
+    };
+    let copy_popover = copy_format_popover(copy_action);
+    let copy_btn = menu_icon_button("edit-copy-symbolic", "Copy color", &copy_popover);
     let settings_btn = icon_button("emblem-system-symbolic", "Settings");
 
     top_bar.append(&picker_btn);
@@ -131,21 +198,15 @@ fn build_ui(app: &adw::Application) {
         gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 
-    load_css(&css_provider, 50, 216, 122);
+    load_css(&css_provider, color_state.get());
 
-    let red = Rc::new(Cell::new(50u8));
-    let green = Rc::new(Cell::new(216u8));
-    let blue = Rc::new(Cell::new(122u8));
-
-    r_scale.set_value(50.0);
-    g_scale.set_value(216.0);
-    b_scale.set_value(122.0);
+    r_scale.set_value(INITIAL_COLOR.r as f64);
+    g_scale.set_value(INITIAL_COLOR.g as f64);
+    b_scale.set_value(INITIAL_COLOR.b as f64);
 
     connect_slider(
         &r_scale,
-        red.clone(),
-        green.clone(),
-        blue.clone(),
+        color_state.clone(),
         r_entry.clone(),
         g_entry.clone(),
         b_entry.clone(),
@@ -156,9 +217,7 @@ fn build_ui(app: &adw::Application) {
 
     connect_slider(
         &g_scale,
-        red.clone(),
-        green.clone(),
-        blue.clone(),
+        color_state.clone(),
         r_entry.clone(),
         g_entry.clone(),
         b_entry.clone(),
@@ -169,9 +228,7 @@ fn build_ui(app: &adw::Application) {
 
     connect_slider(
         &b_scale,
-        red.clone(),
-        green.clone(),
-        blue.clone(),
+        color_state.clone(),
         r_entry.clone(),
         g_entry.clone(),
         b_entry.clone(),
@@ -180,10 +237,63 @@ fn build_ui(app: &adw::Application) {
         ColorChannel::Blue,
     );
 
+    connect_rgb_entry(
+        &r_entry,
+        color_state.clone(),
+        r_scale.clone(),
+        g_scale.clone(),
+        b_scale.clone(),
+        r_entry.clone(),
+        g_entry.clone(),
+        b_entry.clone(),
+        hex_entry.clone(),
+        css_provider.clone(),
+        ColorChannel::Red,
+    );
+
+    connect_rgb_entry(
+        &g_entry,
+        color_state.clone(),
+        r_scale.clone(),
+        g_scale.clone(),
+        b_scale.clone(),
+        r_entry.clone(),
+        g_entry.clone(),
+        b_entry.clone(),
+        hex_entry.clone(),
+        css_provider.clone(),
+        ColorChannel::Green,
+    );
+
+    connect_rgb_entry(
+        &b_entry,
+        color_state.clone(),
+        r_scale.clone(),
+        g_scale.clone(),
+        b_scale.clone(),
+        r_entry.clone(),
+        g_entry.clone(),
+        b_entry.clone(),
+        hex_entry.clone(),
+        css_provider.clone(),
+        ColorChannel::Blue,
+    );
+
+    connect_hex_entry(
+        &hex_entry,
+        color_state.clone(),
+        r_scale.clone(),
+        g_scale.clone(),
+        b_scale.clone(),
+        r_entry.clone(),
+        g_entry.clone(),
+        b_entry.clone(),
+        hex_entry.clone(),
+        css_provider.clone(),
+    );
+
     {
-        let red = red.clone();
-        let green = green.clone();
-        let blue = blue.clone();
+        let color_state = color_state.clone();
 
         let r_scale = r_scale.clone();
         let g_scale = g_scale.clone();
@@ -197,9 +307,7 @@ fn build_ui(app: &adw::Application) {
         let css_provider = css_provider.clone();
 
         picker_btn.connect_clicked(move |_| {
-            let red = red.clone();
-            let green = green.clone();
-            let blue = blue.clone();
+            let color_state = color_state.clone();
 
             let r_scale = r_scale.clone();
             let g_scale = g_scale.clone();
@@ -213,24 +321,20 @@ fn build_ui(app: &adw::Application) {
             let css_provider = css_provider.clone();
 
             glib::MainContext::default().spawn_local(async move {
-                match Color::pick().send().await.and_then(|request| request.response()) {
+                match Color::pick()
+                    .send()
+                    .await
+                    .and_then(|request| request.response())
+                {
                     Ok(color) => {
-                        let r = (color.red() * 255.0).round() as u8;
-                        let g = (color.green() * 255.0).round() as u8;
-                        let b = (color.blue() * 255.0).round() as u8;
+                        let color = Rgb::from_normalized(color.red(), color.green(), color.blue());
 
-                        red.set(r);
-                        green.set(g);
-                        blue.set(b);
-
-                        r_scale.set_value(r as f64);
-                        g_scale.set_value(g as f64);
-                        b_scale.set_value(b as f64);
-
-                        update_fields(
-                            r,
-                            g,
-                            b,
+                        apply_selected_color(
+                            color,
+                            &color_state,
+                            &r_scale,
+                            &g_scale,
+                            &b_scale,
                             &r_entry,
                             &g_entry,
                             &b_entry,
@@ -246,7 +350,8 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
-    window.set_content(Some(&root));
+    overlay.set_child(Some(&root));
+    window.set_content(Some(&overlay));
     window.present();
 }
 
@@ -257,100 +362,12 @@ enum ColorChannel {
     Blue,
 }
 
-fn icon_button(icon_name: &str, tooltip: &str) -> Button {
-    let button = Button::builder()
-        .width_request(34)
-        .height_request(34)
-        .tooltip_text(tooltip)
-        .build();
-
-    let icon = gtk::Image::from_icon_name(icon_name);
-    button.set_child(Some(&icon));
-    button.add_css_class("toolbar-button");
-
-    button
-}
-
-fn window_button(label: &str) -> Button {
-    let button = Button::builder()
-        .label(label)
-        .width_request(34)
-        .height_request(30)
-        .build();
-
-    button.add_css_class("window-button");
-
-    button
-}
-
-fn make_scale() -> Scale {
-    let scale = Scale::with_range(Orientation::Horizontal, 0.0, 255.0, 1.0);
-    scale.set_draw_value(false);
-    scale.set_width_request(300);
-    scale.add_css_class("rgb-slider");
-    scale
-}
-
-fn make_value_entry(value: &str) -> Entry {
-    Entry::builder()
-        .text(value)
-        .editable(false)
-        .width_chars(4)
-        .max_width_chars(4)
-        .halign(Align::End)
-        .build()
-}
-
-fn make_hex_entry(value: &str) -> Entry {
-    Entry::builder()
-        .text(value)
-        .editable(false)
-        .width_chars(9)
-        .max_width_chars(9)
-        .halign(Align::End)
-        .build()
-}
-
-fn slider_row(label: &str, scale: &Scale, value_entry: &Entry, hex_entry: Option<&Entry>) -> gtk::Box {
-    let row = gtk::Box::builder()
-        .orientation(Orientation::Horizontal)
-        .spacing(10)
-        .build();
-
-    let channel_label = Label::builder()
-        .label(label)
-        .width_request(18)
-        .halign(Align::Center)
-        .build();
-
-    channel_label.add_css_class("channel-label");
-
-    let value_box = gtk::Box::builder()
-        .width_request(64)
-        .build();
-    value_box.append(value_entry);
-
-    let hex_box = gtk::Box::builder()
-        .width_request(100)
-        .build();
-
-    if let Some(hex) = hex_entry {
-        hex_box.append(hex);
-    }
-
-    row.append(&channel_label);
-    row.append(scale);
-    row.append(&value_box);
-    row.append(&hex_box);
-
-    row
-}
-
-fn connect_slider(
-    scale: &Scale,
-    red: Rc<Cell<u8>>,
-    green: Rc<Cell<u8>>,
-    blue: Rc<Cell<u8>>,
+fn connect_rgb_entry(
+    entry: &Entry,
+    color_state: ColorState,
+    r_scale: Scale,
+    g_scale: Scale,
+    b_scale: Scale,
     r_entry: Entry,
     g_entry: Entry,
     b_entry: Entry,
@@ -358,19 +375,30 @@ fn connect_slider(
     css_provider: Rc<gtk::CssProvider>,
     channel: ColorChannel,
 ) {
-    scale.connect_value_changed(move |scale| {
-        let value = scale.value().round() as u8;
-
-        match channel {
-            ColorChannel::Red => red.set(value),
-            ColorChannel::Green => green.set(value),
-            ColorChannel::Blue => blue.set(value),
+    entry.connect_changed(move |entry| {
+        if color_state.is_syncing() {
+            return;
         }
 
-        update_fields(
-            red.get(),
-            green.get(),
-            blue.get(),
+        let text = entry.text();
+        let Some(value) = parse_rgb_channel(text.as_str()) else {
+            return;
+        };
+
+        let mut color = color_state.get();
+
+        match channel {
+            ColorChannel::Red => color.r = value,
+            ColorChannel::Green => color.g = value,
+            ColorChannel::Blue => color.b = value,
+        }
+
+        apply_selected_color(
+            color,
+            &color_state,
+            &r_scale,
+            &g_scale,
+            &b_scale,
             &r_entry,
             &g_entry,
             &b_entry,
@@ -380,129 +408,130 @@ fn connect_slider(
     });
 }
 
-fn update_fields(
-    r: u8,
-    g: u8,
-    b: u8,
+fn connect_hex_entry(
+    entry: &Entry,
+    color_state: ColorState,
+    r_scale: Scale,
+    g_scale: Scale,
+    b_scale: Scale,
+    r_entry: Entry,
+    g_entry: Entry,
+    b_entry: Entry,
+    hex_entry: Entry,
+    css_provider: Rc<gtk::CssProvider>,
+) {
+    entry.connect_changed(move |entry| {
+        if color_state.is_syncing() {
+            return;
+        }
+
+        let text = entry.text();
+        let Some(color) = Rgb::from_hex_input(text.as_str()) else {
+            return;
+        };
+
+        apply_selected_color(
+            color,
+            &color_state,
+            &r_scale,
+            &g_scale,
+            &b_scale,
+            &r_entry,
+            &g_entry,
+            &b_entry,
+            &hex_entry,
+            &css_provider,
+        );
+    });
+}
+
+fn connect_slider(
+    scale: &Scale,
+    color_state: ColorState,
+    r_entry: Entry,
+    g_entry: Entry,
+    b_entry: Entry,
+    hex_entry: Entry,
+    css_provider: Rc<gtk::CssProvider>,
+    channel: ColorChannel,
+) {
+    scale.connect_value_changed(move |scale| {
+        if color_state.is_syncing() {
+            return;
+        }
+
+        let value = scale.value().round() as u8;
+        let mut color = color_state.get();
+
+        match channel {
+            ColorChannel::Red => color.r = value,
+            ColorChannel::Green => color.g = value,
+            ColorChannel::Blue => color.b = value,
+        }
+
+        color_state.set(color);
+        update_fields_guarded(
+            color,
+            &color_state,
+            &r_entry,
+            &g_entry,
+            &b_entry,
+            &hex_entry,
+            &css_provider,
+        );
+    });
+}
+
+fn apply_selected_color(
+    color: Rgb,
+    color_state: &ColorState,
+    r_scale: &Scale,
+    g_scale: &Scale,
+    b_scale: &Scale,
     r_entry: &Entry,
     g_entry: &Entry,
     b_entry: &Entry,
     hex_entry: &Entry,
     css_provider: &gtk::CssProvider,
 ) {
-    r_entry.set_text(&r.to_string());
-    g_entry.set_text(&g.to_string());
-    b_entry.set_text(&b.to_string());
+    color_state.set(color);
 
-    let hex = format!("#{:02X}{:02X}{:02X}", r, g, b);
-    hex_entry.set_text(&hex);
+    color_state.set_syncing(true);
+    r_scale.set_value(color.r as f64);
+    g_scale.set_value(color.g as f64);
+    b_scale.set_value(color.b as f64);
 
-    load_css(css_provider, r, g, b);
+    update_fields(color, r_entry, g_entry, b_entry, hex_entry, css_provider);
+    color_state.set_syncing(false);
 }
 
-fn load_css(provider: &gtk::CssProvider, r: u8, g: u8, b: u8) {
-    let hex = format!("#{:02X}{:02X}{:02X}", r, g, b);
+fn update_fields_guarded(
+    color: Rgb,
+    color_state: &ColorState,
+    r_entry: &Entry,
+    g_entry: &Entry,
+    b_entry: &Entry,
+    hex_entry: &Entry,
+    css_provider: &gtk::CssProvider,
+) {
+    color_state.set_syncing(true);
+    update_fields(color, r_entry, g_entry, b_entry, hex_entry, css_provider);
+    color_state.set_syncing(false);
+}
 
-    let brightness = (0.299 * r as f64 + 0.587 * g as f64 + 0.114 * b as f64) / 255.0;
+fn update_fields(
+    color: Rgb,
+    r_entry: &Entry,
+    g_entry: &Entry,
+    b_entry: &Entry,
+    hex_entry: &Entry,
+    css_provider: &gtk::CssProvider,
+) {
+    r_entry.set_text(&color.r.to_string());
+    g_entry.set_text(&color.g.to_string());
+    b_entry.set_text(&color.b.to_string());
 
-    let text_color = if brightness > 0.55 {
-        "#111111"
-    } else {
-        "#F5F5F5"
-    };
+    hex_entry.set_text(&color.hex());
 
-    let panel_color = if brightness > 0.55 {
-        "rgba(255,255,255,0.42)"
-    } else {
-        "rgba(0,0,0,0.28)"
-    };
-
-    let border_color = if brightness > 0.55 {
-        "rgba(0,0,0,0.18)"
-    } else {
-        "rgba(255,255,255,0.20)"
-    };
-
-    let css = format!(
-        "
-        window {{
-            border-radius: 0;
-        }}
-
-        .app-bg {{
-            background: {};
-            color: {};
-            border-radius: 0;
-        }}
-
-        .top-bar {{
-            border-bottom: 1px solid {};
-            padding-left: 10px;
-            padding-right: 10px;
-        }}
-
-        .toolbar-button,
-        .window-button {{
-            border-radius: 0;
-            background: transparent;
-            color: {};
-            border: none;
-            padding: 0;
-            box-shadow: none;
-        }}
-
-        .toolbar-button:hover,
-        .window-button:hover {{
-            background: rgba(255,255,255,0.16);
-        }}
-
-        .channel-label {{
-            font-weight: 700;
-            color: {};
-        }}
-
-        entry {{
-            border-radius: 0;
-            background: {};
-            color: {};
-            border: 1px solid {};
-            font-family: monospace;
-            font-weight: 700;
-        }}
-
-        scale trough {{
-            min-height: 8px;
-            border-radius: 999px;
-            background: {};
-            border: 1px solid {};
-        }}
-
-        scale highlight {{
-            border-radius: 999px;
-            background: {};
-        }}
-
-        scale slider {{
-            min-width: 18px;
-            min-height: 18px;
-            border-radius: 999px;
-            background: {};
-            border: 2px solid {};
-        }}
-        ",
-        hex,
-        text_color,
-        border_color,
-        text_color,
-        text_color,
-        panel_color,
-        text_color,
-        border_color,
-        panel_color,
-        border_color,
-        text_color,
-        text_color,
-        border_color,
-    );
-    provider.load_from_data(&css);
+    load_css(css_provider, color);
 }

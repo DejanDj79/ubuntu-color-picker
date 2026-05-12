@@ -54,25 +54,41 @@ pub fn make_scale() -> Scale {
 }
 
 pub fn make_value_entry(value: &str) -> Entry {
-    Entry::builder()
+    let entry = Entry::builder()
         .text(value)
         .editable(true)
         .width_chars(4)
         .max_width_chars(4)
         .tooltip_text("Edit RGB value")
         .halign(Align::End)
-        .build()
+        .build();
+
+    add_copy_icon(&entry, "Copy RGB color");
+    entry
 }
 
 pub fn make_hex_entry(value: &str) -> Entry {
-    Entry::builder()
+    let entry = Entry::builder()
         .text(value)
         .editable(true)
         .width_chars(9)
         .max_width_chars(9)
         .tooltip_text("Edit HEX color")
         .halign(Align::End)
-        .build()
+        .build();
+
+    add_copy_icon(&entry, "Copy HEX color");
+    entry
+}
+
+fn add_copy_icon(entry: &Entry, tooltip: &str) {
+    entry.set_icon_from_icon_name(
+        gtk::EntryIconPosition::Secondary,
+        Some("edit-copy-symbolic"),
+    );
+    entry.set_icon_activatable(gtk::EntryIconPosition::Secondary, true);
+    entry.set_icon_sensitive(gtk::EntryIconPosition::Secondary, true);
+    entry.set_icon_tooltip_text(gtk::EntryIconPosition::Secondary, Some(tooltip));
 }
 
 pub fn copy_toast() -> (gtk::Box, Label) {

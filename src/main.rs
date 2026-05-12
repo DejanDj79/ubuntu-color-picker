@@ -176,6 +176,31 @@ fn build_ui(app: &adw::Application) {
     let b_entry = make_value_entry("122");
     let hex_entry = make_hex_entry("#32D87A");
 
+    connect_entry_copy_icon(
+        &r_entry,
+        color_state.clone(),
+        copy_feedback.clone(),
+        CopyFormat::Rgb,
+    );
+    connect_entry_copy_icon(
+        &g_entry,
+        color_state.clone(),
+        copy_feedback.clone(),
+        CopyFormat::Rgb,
+    );
+    connect_entry_copy_icon(
+        &b_entry,
+        color_state.clone(),
+        copy_feedback.clone(),
+        CopyFormat::Rgb,
+    );
+    connect_entry_copy_icon(
+        &hex_entry,
+        color_state.clone(),
+        copy_feedback.clone(),
+        CopyFormat::Hex,
+    );
+
     let r_row = slider_row("R", &r_scale, &r_entry, None);
     let g_row = slider_row("G", &g_scale, &g_entry, None);
     let b_row = slider_row("B", &b_scale, &b_entry, Some(&hex_entry));
@@ -360,6 +385,19 @@ enum ColorChannel {
     Red,
     Green,
     Blue,
+}
+
+fn connect_entry_copy_icon(
+    entry: &Entry,
+    color_state: ColorState,
+    copy_feedback: CopyFeedback,
+    format: CopyFormat,
+) {
+    entry.connect_icon_press(move |entry, position| {
+        if position == gtk::EntryIconPosition::Secondary {
+            copy_color(entry, &copy_feedback, color_state.get(), format);
+        }
+    });
 }
 
 fn connect_rgb_entry(

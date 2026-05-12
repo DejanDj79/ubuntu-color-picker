@@ -385,6 +385,7 @@ fn connect_rgb_entry(
             return;
         };
 
+        let cursor_position = entry.position();
         let mut color = color_state.get();
 
         match channel {
@@ -405,6 +406,8 @@ fn connect_rgb_entry(
             &hex_entry,
             &css_provider,
         );
+
+        restore_entry_position(entry, cursor_position);
     });
 }
 
@@ -430,6 +433,13 @@ fn connect_hex_entry(
             return;
         };
 
+        let cursor_offset = if text.trim_start().starts_with('#') {
+            0
+        } else {
+            1
+        };
+        let cursor_position = entry.position() + cursor_offset;
+
         apply_selected_color(
             color,
             &color_state,
@@ -442,7 +452,14 @@ fn connect_hex_entry(
             &hex_entry,
             &css_provider,
         );
+
+        restore_entry_position(entry, cursor_position);
     });
+}
+
+fn restore_entry_position(entry: &Entry, position: i32) {
+    let max_position = entry.text().chars().count() as i32;
+    entry.set_position(position.clamp(0, max_position));
 }
 
 fn connect_slider(

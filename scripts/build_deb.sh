@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGE="ubuntu-color-picker"
-APP_ID="com.example.UbuntuColorPicker"
-APP_NAME="Ubuntu Color Picker"
+PACKAGE="d-pick"
+APP_ID="com.dejandj79.DPick"
+APP_NAME="D-Pick"
 VERSION="$(grep -m1 '^version = ' "$ROOT_DIR/Cargo.toml" | sed -E 's/version = "([^"]+)"/\1/')"
 ARCH="$(dpkg --print-architecture)"
 BUILD_ROOT="$ROOT_DIR/target/deb/${PACKAGE}_${VERSION}_${ARCH}"

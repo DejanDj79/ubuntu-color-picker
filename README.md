@@ -1,8 +1,10 @@
-# Ubuntu Color Picker
+# D-Pick
+
+![D-Pick screenshot](screenshot.png)
 
 A small GTK 4 / libadwaita color picker for Ubuntu.
 
-Ubuntu Color Picker is built for quick color work: pick a color from the screen, fine-tune it with RGB controls, copy common CSS formats, save favorites, keep a small recent palette, and explore useful color suggestions.
+D-Pick is built for quick color work: pick a color from the screen, fine-tune it with RGB controls, copy common CSS formats, save favorites, keep a small recent palette, and explore useful color suggestions.
 
 ## Features
 
@@ -29,13 +31,13 @@ Each release can include a `.deb` package as a downloadable asset.
 After downloading the package:
 
 ```bash
-sudo apt install ./ubuntu-color-picker_0.1.0_amd64.deb
+sudo apt install ./d-pick_0.1.0_amd64.deb
 ```
 
 If you build the package locally, install it from the `dist` directory:
 
 ```bash
-sudo apt install ./dist/ubuntu-color-picker_0.1.0_amd64.deb
+sudo apt install ./dist/d-pick_0.1.0_amd64.deb
 ```
 
 ## Build From Source
@@ -69,13 +71,13 @@ The repository includes a packaging script:
 The generated package is written to:
 
 ```text
-dist/ubuntu-color-picker_0.1.0_amd64.deb
+dist/d-pick_0.1.0_amd64.deb
 ```
 
 The package installs:
 
-- `/usr/bin/ubuntu-color-picker`
-- `/usr/share/applications/com.example.UbuntuColorPicker.desktop`
+- `/usr/bin/d-pick`
+- `/usr/share/applications/com.dejandj79.DPick.desktop`
 - `/usr/share/icons/hicolor/scalable/apps/picker-icon.svg`
 
 ## Data Storage
@@ -83,11 +85,11 @@ The package installs:
 Saved colors and settings are stored in:
 
 ```text
-~/.local/share/ubuntu-color-picker/colors.json
+~/.local/share/d-pick/colors.json
 ```
 
 or under `$XDG_DATA_HOME` when that environment variable is set.
 
 ## Project Status
 
-This is the first usable release of the app. The current focus is a polished, compact Ubuntu desktop utility rather than a large color-management suite.
+This is the first usable release of D-Pick. The current focus is a polished, compact Ubuntu desktop utility rather than a large color-management suite.

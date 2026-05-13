@@ -1,5 +1,5 @@
 [package]
-name = "ubuntu-color-picker"
+name = "d-pick"
 version = "0.1.0"
 edition = "2021"
 

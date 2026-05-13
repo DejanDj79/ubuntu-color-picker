@@ -135,6 +135,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
+name = "d-pick"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ashpd",
+ "gtk4",
+ "libadwaita",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "endi"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1081,19 +1094,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "ubuntu-color-picker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ashpd",
- "gtk4",
- "libadwaita",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]

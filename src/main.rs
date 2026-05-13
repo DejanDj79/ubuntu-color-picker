@@ -69,7 +69,7 @@ impl ColorState {
 #[tokio::main]
 async fn main() {
     let app = adw::Application::builder()
-        .application_id("com.example.UbuntuColorPicker")
+        .application_id("com.dejandj79.DPick")
         .build();
 
     app.connect_activate(build_ui);
@@ -85,7 +85,7 @@ fn build_ui(app: &adw::Application) {
 
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .title("Color Picker")
+        .title("D-Pick")
         .icon_name(app_icon::APP_ICON_NAME)
         .default_width(520)
         .default_height(282)

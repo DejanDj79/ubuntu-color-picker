@@ -7,7 +7,7 @@ pub fn show(parent: &adw::ApplicationWindow, app: &adw::Application) {
         .application(app)
         .transient_for(parent)
         .modal(true)
-        .program_name("Ubuntu Color Picker")
+        .program_name("D-Pick")
         .logo_icon_name(app_icon::APP_ICON_NAME)
         .version(env!("CARGO_PKG_VERSION"))
         .comments("Pick, copy, save, and explore colors.")

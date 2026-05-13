@@ -189,5 +189,5 @@ fn storage_path() -> Option<PathBuf> {
         .map(PathBuf::from)
         .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")))?;
 
-    Some(base.join("ubuntu-color-picker").join("colors.json"))
+    Some(base.join("d-pick").join("colors.json"))
 }

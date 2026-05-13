@@ -53,13 +53,13 @@ impl SavedColorsPanel {
         root.append(&favorites_box);
 
         let fade_revealer = gtk::Revealer::builder()
-            .transition_duration(180)
+            .transition_duration(420)
             .transition_type(gtk::RevealerTransitionType::Crossfade)
             .build();
         fade_revealer.set_child(Some(&root));
 
         let slide_revealer = gtk::Revealer::builder()
-            .transition_duration(220)
+            .transition_duration(480)
             .transition_type(gtk::RevealerTransitionType::SlideDown)
             .build();
         slide_revealer.set_child(Some(&fade_revealer));

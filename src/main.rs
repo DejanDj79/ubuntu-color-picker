@@ -79,7 +79,7 @@ fn build_ui(app: &adw::Application) {
         .application(app)
         .title("Color Picker")
         .default_width(520)
-        .default_height(230)
+        .default_height(282)
         .resizable(false)
         .build();
 
@@ -112,11 +112,7 @@ fn build_ui(app: &adw::Application) {
         .autohide(true)
         .has_arrow(true)
         .build();
-    let saved_btn = menu_icon_button(
-        "document-open-recent-symbolic",
-        "History and favorites",
-        &saved_popover,
-    );
+    let saved_btn = menu_icon_button("user-bookmarks-symbolic", "Favorites", &saved_popover);
     let copy_feedback = CopyFeedback::new(&copy_toast, &copy_toast_label);
     let copy_action: Rc<dyn Fn(CopyFormat)> = {
         let color_state = color_state.clone();
@@ -278,6 +274,8 @@ fn build_ui(app: &adw::Application) {
         )
     };
 
+    content.append(&saved_panel.palette_widget());
+
     saved_panel.set_current(color_state.get());
 
     r_scale.set_value(INITIAL_COLOR.r as f64);
@@ -430,7 +428,7 @@ fn build_ui(app: &adw::Application) {
                             &hex_entry,
                             &css_provider,
                         );
-                        saved_panel.record_recent(color);
+                        saved_panel.set_current(color);
                     }
                     Err(error) => {
                         hex_entry.set_text(&format!("Error: {}", error));

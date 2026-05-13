@@ -13,7 +13,8 @@ pub struct SavedColorsPanel {
     popover: Popover,
     favorite_button: Button,
     favorites_box: gtk::Box,
-    recent_box: gtk::Box,
+    palette_root: gtk::Box,
+    palette_colors_box: gtk::Box,
     copy_feedback: CopyFeedback,
     on_select: Rc<dyn Fn(Rgb)>,
 }
@@ -44,17 +45,43 @@ impl SavedColorsPanel {
             .spacing(4)
             .build();
 
-        let recent_label = section_label("Recent");
-        let recent_box = gtk::Box::builder()
-            .orientation(Orientation::Vertical)
-            .spacing(4)
-            .build();
-
         root.append(&favorites_label);
         root.append(&favorites_box);
-        root.append(&recent_label);
-        root.append(&recent_box);
         popover.set_child(Some(&root));
+
+        let palette_root = gtk::Box::builder()
+            .orientation(Orientation::Horizontal)
+            .spacing(8)
+            .height_request(36)
+            .build();
+        palette_root.add_css_class("palette-strip");
+
+        let palette_label = Label::builder()
+            .label("Palette")
+            .halign(Align::Start)
+            .xalign(0.0)
+            .build();
+        palette_label.add_css_class("palette-label");
+
+        let add_palette_button = Button::builder()
+            .width_request(30)
+            .height_request(30)
+            .tooltip_text("Add to palette")
+            .build();
+        let add_palette_icon = gtk::Image::from_icon_name("list-add-symbolic");
+        add_palette_button.set_child(Some(&add_palette_icon));
+        add_palette_button.add_css_class("palette-add-button");
+
+        let palette_colors_box = gtk::Box::builder()
+            .orientation(Orientation::Horizontal)
+            .spacing(6)
+            .hexpand(true)
+            .halign(Align::Start)
+            .build();
+
+        palette_root.append(&palette_label);
+        palette_root.append(&add_palette_button);
+        palette_root.append(&palette_colors_box);
 
         let panel = Self {
             storage,
@@ -62,7 +89,8 @@ impl SavedColorsPanel {
             popover,
             favorite_button,
             favorites_box,
-            recent_box,
+            palette_root,
+            palette_colors_box,
             copy_feedback,
             on_select,
         };
@@ -75,20 +103,19 @@ impl SavedColorsPanel {
             });
         }
 
+        {
+            let panel = panel.clone();
+            add_palette_button.connect_clicked(move |_| {
+                panel.add_current_to_palette();
+            });
+        }
+
         panel.refresh();
         panel
     }
 
-    pub fn record_recent(&self, color: Rgb) {
-        self.current_color.set(color);
-
-        {
-            let mut storage = self.storage.borrow_mut();
-            storage.add_recent(color);
-            storage.save();
-        }
-
-        self.refresh();
+    pub fn palette_widget(&self) -> gtk::Box {
+        self.palette_root.clone()
     }
 
     pub fn set_current(&self, color: Rgb) {
@@ -102,6 +129,18 @@ impl SavedColorsPanel {
         {
             let mut storage = self.storage.borrow_mut();
             storage.toggle_favorite(color);
+            storage.save();
+        }
+
+        self.refresh();
+    }
+
+    fn add_current_to_palette(&self) {
+        let color = self.current_color.get();
+
+        {
+            let mut storage = self.storage.borrow_mut();
+            storage.add_palette_color(color);
             storage.save();
         }
 
@@ -140,18 +179,12 @@ impl SavedColorsPanel {
             self.clone(),
             true,
         );
-        populate_color_list(
-            &self.recent_box,
-            storage.recent(),
-            "No recent colors yet",
-            self.clone(),
-            false,
-        );
+        populate_palette(&self.palette_colors_box, storage.palette(), self.clone());
     }
 
     fn select_color(&self, color: Rgb) {
         (self.on_select)(color);
-        self.record_recent(color);
+        self.set_current(color);
         self.popover.popdown();
     }
 
@@ -201,6 +234,63 @@ fn populate_color_list(
     for color in colors {
         container.append(&color_row(*color, panel.clone(), can_remove));
     }
+}
+
+fn populate_palette(container: &gtk::Box, colors: &[Rgb], panel: SavedColorsPanel) {
+    while let Some(child) = container.first_child() {
+        container.remove(&child);
+    }
+
+    if colors.is_empty() {
+        let empty = Label::builder()
+            .label("Empty")
+            .halign(Align::Start)
+            .xalign(0.0)
+            .build();
+        empty.add_css_class("palette-empty-label");
+        container.append(&empty);
+        return;
+    }
+
+    for color in colors {
+        container.append(&palette_color_button(*color, panel.clone()));
+    }
+}
+
+fn palette_color_button(color: Rgb, panel: SavedColorsPanel) -> Button {
+    let button = Button::builder()
+        .width_request(28)
+        .height_request(28)
+        .tooltip_text(color.hex())
+        .build();
+
+    button.add_css_class("palette-color-button");
+
+    let swatch = gtk::DrawingArea::builder()
+        .width_request(18)
+        .height_request(18)
+        .build();
+
+    swatch.set_draw_func(move |_, cr, width, height| {
+        cr.set_source_rgb(
+            color.r as f64 / 255.0,
+            color.g as f64 / 255.0,
+            color.b as f64 / 255.0,
+        );
+        cr.rectangle(0.0, 0.0, width as f64, height as f64);
+        let _ = cr.fill();
+    });
+
+    button.set_child(Some(&swatch));
+
+    {
+        let panel = panel.clone();
+        button.connect_clicked(move |_| {
+            panel.select_color(color);
+        });
+    }
+
+    button
 }
 
 fn color_row(color: Rgb, panel: SavedColorsPanel, can_remove: bool) -> gtk::Box {

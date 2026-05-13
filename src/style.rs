@@ -134,6 +134,37 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             padding: 3px 7px;
         }}
 
+        .palette-strip {{
+            border-top: 1px solid {};
+            padding-top: 8px;
+            margin-top: 2px;
+        }}
+
+        .palette-label {{
+            min-width: 54px;
+            font-size: 11px;
+            font-weight: 800;
+            opacity: 0.78;
+        }}
+
+        .palette-add-button,
+        .palette-color-button {{
+            border-radius: 6px;
+            background: {};
+            padding: 0;
+        }}
+
+        .palette-add-button:hover,
+        .palette-color-button:hover {{
+            background: rgba(128,128,128,0.16);
+        }}
+
+        .palette-empty-label {{
+            font-size: 11px;
+            opacity: 0.62;
+            padding-top: 6px;
+        }}
+
         scale trough {{
             min-height: 8px;
             border-radius: 999px;
@@ -162,6 +193,8 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         panel_color,
         text_color,
         border_color,
+        border_color,
+        panel_color,
         panel_color,
         border_color,
         text_color,

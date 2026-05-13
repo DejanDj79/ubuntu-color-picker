@@ -4,12 +4,13 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-const RECENT_LIMIT: usize = 24;
+const PALETTE_LIMIT: usize = 18;
 const FAVORITES_LIMIT: usize = 48;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ColorCollections {
-    recent: Vec<Rgb>,
+    palette: Vec<Rgb>,
     favorites: Vec<Rgb>,
 }
 
@@ -42,17 +43,17 @@ impl ColorCollections {
         }
     }
 
-    pub fn recent(&self) -> &[Rgb] {
-        &self.recent
+    pub fn palette(&self) -> &[Rgb] {
+        &self.palette
     }
 
     pub fn favorites(&self) -> &[Rgb] {
         &self.favorites
     }
 
-    pub fn add_recent(&mut self, color: Rgb) {
-        move_to_front(&mut self.recent, color);
-        self.recent.truncate(RECENT_LIMIT);
+    pub fn add_palette_color(&mut self, color: Rgb) {
+        move_to_front(&mut self.palette, color);
+        self.palette.truncate(PALETTE_LIMIT);
     }
 
     pub fn toggle_favorite(&mut self, color: Rgb) -> bool {

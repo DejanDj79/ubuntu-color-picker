@@ -58,6 +58,10 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             background: rgba(255,255,255,0.22);
         }}
 
+        .toolbar-button.palette-active {{
+            background: rgba(255,255,255,0.22);
+        }}
+
         .channel-label {{
             font-weight: 700;
             color: {};
@@ -136,33 +140,22 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
 
         .palette-strip {{
             border-top: 1px solid {};
-            padding-top: 8px;
-            margin-top: 2px;
+            padding-top: 7px;
+            margin-top: 0;
         }}
 
-        .palette-label {{
-            min-width: 54px;
-            font-size: 11px;
-            font-weight: 800;
-            opacity: 0.78;
-        }}
-
-        .palette-add-button,
         .palette-color-button {{
-            border-radius: 6px;
-            background: {};
+            border-radius: 999px;
+            background: transparent;
             padding: 0;
         }}
 
-        .palette-add-button:hover,
         .palette-color-button:hover {{
             background: rgba(128,128,128,0.16);
         }}
 
         .palette-empty-label {{
-            font-size: 11px;
-            opacity: 0.62;
-            padding-top: 6px;
+            min-height: 24px;
         }}
 
         scale trough {{
@@ -194,7 +187,6 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         text_color,
         border_color,
         border_color,
-        panel_color,
         panel_color,
         border_color,
         text_color,

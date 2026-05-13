@@ -108,6 +108,7 @@ fn build_ui(app: &adw::Application) {
     let picker_btn = icon_button("color-select-symbolic", "Pick color");
     let sliders_btn = icon_button("view-list-symbolic", "RGB sliders");
     let favorite_btn = icon_button("non-starred-symbolic", "Add favorite");
+    let palette_btn = icon_button("list-add-symbolic", "Add to palette");
     let saved_popover = gtk::Popover::builder()
         .autohide(true)
         .has_arrow(true)
@@ -130,6 +131,7 @@ fn build_ui(app: &adw::Application) {
     top_bar.append(&picker_btn);
     top_bar.append(&sliders_btn);
     top_bar.append(&favorite_btn);
+    top_bar.append(&palette_btn);
     top_bar.append(&saved_btn);
     top_bar.append(&copy_btn);
     top_bar.append(&settings_btn);
@@ -256,6 +258,7 @@ fn build_ui(app: &adw::Application) {
             collections.clone(),
             current_color.clone(),
             favorite_btn.clone(),
+            palette_btn.clone(),
             copy_feedback.clone(),
             Rc::new(move |color| {
                 apply_selected_color(

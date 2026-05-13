@@ -12,6 +12,7 @@ pub struct SavedColorsPanel {
     current_color: Rc<Cell<Rgb>>,
     popover: Popover,
     favorite_button: Button,
+    palette_button: Button,
     favorites_box: gtk::Box,
     palette_root: gtk::Box,
     palette_colors_box: gtk::Box,
@@ -25,6 +26,7 @@ impl SavedColorsPanel {
         storage: Rc<RefCell<ColorCollections>>,
         current_color: Rc<Cell<Rgb>>,
         favorite_button: Button,
+        palette_button: Button,
         copy_feedback: CopyFeedback,
         on_select: Rc<dyn Fn(Rgb)>,
     ) -> Self {
@@ -52,25 +54,9 @@ impl SavedColorsPanel {
         let palette_root = gtk::Box::builder()
             .orientation(Orientation::Horizontal)
             .spacing(8)
-            .height_request(36)
+            .height_request(30)
             .build();
         palette_root.add_css_class("palette-strip");
-
-        let palette_label = Label::builder()
-            .label("Palette")
-            .halign(Align::Start)
-            .xalign(0.0)
-            .build();
-        palette_label.add_css_class("palette-label");
-
-        let add_palette_button = Button::builder()
-            .width_request(30)
-            .height_request(30)
-            .tooltip_text("Add to palette")
-            .build();
-        let add_palette_icon = gtk::Image::from_icon_name("list-add-symbolic");
-        add_palette_button.set_child(Some(&add_palette_icon));
-        add_palette_button.add_css_class("palette-add-button");
 
         let palette_colors_box = gtk::Box::builder()
             .orientation(Orientation::Horizontal)
@@ -79,8 +65,6 @@ impl SavedColorsPanel {
             .halign(Align::Start)
             .build();
 
-        palette_root.append(&palette_label);
-        palette_root.append(&add_palette_button);
         palette_root.append(&palette_colors_box);
 
         let panel = Self {
@@ -88,6 +72,7 @@ impl SavedColorsPanel {
             current_color,
             popover,
             favorite_button,
+            palette_button,
             favorites_box,
             palette_root,
             palette_colors_box,
@@ -105,7 +90,8 @@ impl SavedColorsPanel {
 
         {
             let panel = panel.clone();
-            add_palette_button.connect_clicked(move |_| {
+            let palette_button = panel.palette_button.clone();
+            palette_button.connect_clicked(move |_| {
                 panel.add_current_to_palette();
             });
         }
@@ -170,6 +156,15 @@ impl SavedColorsPanel {
             self.favorite_button.set_tooltip_text(Some("Add favorite"));
             self.favorite_button.remove_css_class("favorite-active");
             set_button_icon(&self.favorite_button, "non-starred-symbolic");
+        }
+
+        if storage.palette().contains(&current) {
+            self.palette_button
+                .set_tooltip_text(Some("Already in palette"));
+            self.palette_button.add_css_class("palette-active");
+        } else {
+            self.palette_button.set_tooltip_text(Some("Add to palette"));
+            self.palette_button.remove_css_class("palette-active");
         }
 
         populate_color_list(
@@ -243,7 +238,7 @@ fn populate_palette(container: &gtk::Box, colors: &[Rgb], panel: SavedColorsPane
 
     if colors.is_empty() {
         let empty = Label::builder()
-            .label("Empty")
+            .label("")
             .halign(Align::Start)
             .xalign(0.0)
             .build();
@@ -259,25 +254,26 @@ fn populate_palette(container: &gtk::Box, colors: &[Rgb], panel: SavedColorsPane
 
 fn palette_color_button(color: Rgb, panel: SavedColorsPanel) -> Button {
     let button = Button::builder()
-        .width_request(28)
-        .height_request(28)
+        .width_request(24)
+        .height_request(24)
         .tooltip_text(color.hex())
         .build();
 
     button.add_css_class("palette-color-button");
 
     let swatch = gtk::DrawingArea::builder()
-        .width_request(18)
-        .height_request(18)
+        .width_request(16)
+        .height_request(16)
         .build();
 
     swatch.set_draw_func(move |_, cr, width, height| {
+        let radius = width.min(height) as f64 / 2.0;
         cr.set_source_rgb(
             color.r as f64 / 255.0,
             color.g as f64 / 255.0,
             color.b as f64 / 255.0,
         );
-        cr.rectangle(0.0, 0.0, width as f64, height as f64);
+        cr.arc(radius, radius, radius, 0.0, std::f64::consts::TAU);
         let _ = cr.fill();
     });
 

@@ -8,6 +8,8 @@ pub fn icon_button(icon_name: &str, tooltip: &str) -> Button {
     let button = Button::builder()
         .width_request(30)
         .height_request(30)
+        .halign(Align::Center)
+        .valign(Align::Center)
         .tooltip_text(tooltip)
         .build();
 
@@ -22,6 +24,8 @@ pub fn menu_icon_button(icon_name: &str, tooltip: &str, popover: &Popover) -> Me
     let button = MenuButton::builder()
         .width_request(30)
         .height_request(30)
+        .halign(Align::Center)
+        .valign(Align::Center)
         .tooltip_text(tooltip)
         .has_frame(false)
         .build();

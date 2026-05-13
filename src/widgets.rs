@@ -6,8 +6,8 @@ use crate::color::CopyFormat;
 
 pub fn icon_button(icon_name: &str, tooltip: &str) -> Button {
     let button = Button::builder()
-        .width_request(34)
-        .height_request(34)
+        .width_request(30)
+        .height_request(30)
         .tooltip_text(tooltip)
         .build();
 
@@ -20,8 +20,8 @@ pub fn icon_button(icon_name: &str, tooltip: &str) -> Button {
 
 pub fn menu_icon_button(icon_name: &str, tooltip: &str, popover: &Popover) -> MenuButton {
     let button = MenuButton::builder()
-        .width_request(34)
-        .height_request(34)
+        .width_request(30)
+        .height_request(30)
         .tooltip_text(tooltip)
         .has_frame(false)
         .build();

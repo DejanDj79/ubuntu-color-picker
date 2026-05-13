@@ -40,8 +40,8 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         }}
 
         .toolbar-button {{
-            min-width: 34px;
-            min-height: 34px;
+            width: 30px;
+            height: 30px;
             border-radius: 6px;
             background: transparent;
             color: {};
@@ -62,8 +62,8 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         }}
 
         .toolbar-button:hover {{
-            min-width: 34px;
-            min-height: 34px;
+            min-width: 30px;
+            min-height: 30px;
             border-radius: 6px;
             background: rgba(255,255,255,0.16);
         }}

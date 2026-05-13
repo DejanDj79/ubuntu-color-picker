@@ -1,6 +1,6 @@
 # D-Pick
 
-![D-Pick screenshot](screenshot.png)
+![D-Pick screenshot](screenshot2.png)
 
 A small GTK 4 / libadwaita color picker for Ubuntu.
 

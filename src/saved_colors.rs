@@ -6,6 +6,8 @@ use gtk::{Align, Button, Label, Orientation};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+const PALETTE_COLUMNS: usize = 12;
+
 #[derive(Clone)]
 pub struct SavedColorsPanel {
     storage: Rc<RefCell<ColorCollections>>,
@@ -17,7 +19,7 @@ pub struct SavedColorsPanel {
     fade_revealer: gtk::Revealer,
     favorites_box: gtk::Box,
     palette_root: gtk::Box,
-    palette_colors_box: gtk::Box,
+    palette_grid: gtk::Grid,
     copy_feedback: CopyFeedback,
     on_select: Rc<dyn Fn(Rgb)>,
 }
@@ -65,20 +67,26 @@ impl SavedColorsPanel {
         slide_revealer.set_child(Some(&fade_revealer));
 
         let palette_root = gtk::Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(8)
-            .height_request(30)
+            .orientation(Orientation::Vertical)
+            .spacing(6)
             .build();
         palette_root.add_css_class("palette-strip");
 
-        let palette_colors_box = gtk::Box::builder()
-            .orientation(Orientation::Horizontal)
-            .spacing(6)
-            .hexpand(true)
+        let palette_label = Label::builder()
+            .label("Recently used")
+            .halign(Align::Start)
+            .xalign(0.0)
+            .build();
+        palette_label.add_css_class("palette-label");
+
+        let palette_grid = gtk::Grid::builder()
+            .column_spacing(6)
+            .row_spacing(6)
             .halign(Align::Start)
             .build();
 
-        palette_root.append(&palette_colors_box);
+        palette_root.append(&palette_label);
+        palette_root.append(&palette_grid);
 
         let panel = Self {
             storage,
@@ -90,7 +98,7 @@ impl SavedColorsPanel {
             fade_revealer,
             favorites_box,
             palette_root,
-            palette_colors_box,
+            palette_grid,
             copy_feedback,
             on_select,
         };
@@ -170,7 +178,7 @@ impl SavedColorsPanel {
         self.refresh();
     }
 
-    fn refresh(&self) {
+    pub fn refresh(&self) {
         let current = self.current_color.get();
         let storage = self.storage.borrow();
 
@@ -201,7 +209,7 @@ impl SavedColorsPanel {
             self.clone(),
             true,
         );
-        populate_palette(&self.palette_colors_box, storage.palette(), self.clone());
+        populate_palette(&self.palette_grid, storage.palette(), self.clone());
     }
 
     fn toggle_panel(&self) {
@@ -273,50 +281,57 @@ fn populate_color_list(
     }
 }
 
-fn populate_palette(container: &gtk::Box, colors: &[Rgb], panel: SavedColorsPanel) {
-    while let Some(child) = container.first_child() {
-        container.remove(&child);
+fn populate_palette(grid: &gtk::Grid, colors: &[Rgb], panel: SavedColorsPanel) {
+    while let Some(child) = grid.first_child() {
+        grid.remove(&child);
     }
 
-    if colors.is_empty() {
-        let empty = Label::builder()
-            .label("")
-            .halign(Align::Start)
-            .xalign(0.0)
-            .build();
-        empty.add_css_class("palette-empty-label");
-        container.append(&empty);
-        return;
-    }
-
-    for color in colors {
-        container.append(&palette_color_button(*color, panel.clone()));
+    for (index, color) in colors.iter().enumerate() {
+        let column = index % PALETTE_COLUMNS;
+        let row = index / PALETTE_COLUMNS;
+        grid.attach(
+            &palette_color_button(*color, panel.clone()),
+            column as i32,
+            row as i32,
+            1,
+            1,
+        );
     }
 }
 
 fn palette_color_button(color: Rgb, panel: SavedColorsPanel) -> Button {
     let button = Button::builder()
-        .width_request(24)
-        .height_request(24)
+        .width_request(26)
+        .height_request(26)
         .tooltip_text(color.hex())
         .build();
 
     button.add_css_class("palette-color-button");
 
     let swatch = gtk::DrawingArea::builder()
-        .width_request(16)
-        .height_request(16)
+        .width_request(18)
+        .height_request(18)
         .build();
 
     swatch.set_draw_func(move |_, cr, width, height| {
-        let radius = width.min(height) as f64 / 2.0;
+        let radius = width.min(height) as f64 / 2.0 - 1.0;
+        cr.arc(
+            width as f64 / 2.0,
+            height as f64 / 2.0,
+            radius,
+            0.0,
+            std::f64::consts::TAU,
+        );
         cr.set_source_rgb(
             color.r as f64 / 255.0,
             color.g as f64 / 255.0,
             color.b as f64 / 255.0,
         );
-        cr.arc(radius, radius, radius, 0.0, std::f64::consts::TAU);
-        let _ = cr.fill();
+        let _ = cr.fill_preserve();
+
+        cr.set_source_rgb(1.0, 1.0, 1.0);
+        cr.set_line_width(2.0);
+        let _ = cr.stroke();
     });
 
     button.set_child(Some(&swatch));

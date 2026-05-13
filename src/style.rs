@@ -95,6 +95,13 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             color: #ffffff;
         }}
 
+        .toolbar-button.settings-active,
+        .toolbar-button.suggestions-active {{
+            border-radius: 6px;
+            background: #2d2f2f;
+            color: #ffffff;
+        }}
+
         .channel-label {{
             font-weight: 700;
             color: {};
@@ -142,6 +149,93 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             padding: 10px 18px 12px 18px;
         }}
 
+        .settings-root {{
+            background: {};
+            border-top: 1px solid {};
+            padding: 10px 18px 12px 18px;
+        }}
+
+        .suggestions-root {{
+            background: {};
+            border-left: 1px solid {};
+            padding: 10px 10px 12px 10px;
+        }}
+
+        .suggestions-section-label {{
+            font-size: 11px;
+            font-weight: 800;
+            opacity: 0.75;
+            margin-top: 4px;
+        }}
+
+        .suggestions-contrast {{
+            border-bottom: 1px solid {};
+            padding-bottom: 6px;
+            margin-bottom: 2px;
+        }}
+
+        .suggestions-contrast-label {{
+            font-size: 11px;
+            opacity: 0.72;
+        }}
+
+        .suggestions-contrast-value {{
+            font-size: 11px;
+            font-weight: 800;
+        }}
+
+        .suggestion-color-row {{
+            min-height: 28px;
+        }}
+
+        .suggestion-color-button,
+        .suggestion-copy {{
+            border-radius: 6px;
+            background: transparent;
+            padding: 3px 7px;
+        }}
+
+        .suggestion-color-button:hover,
+        .suggestion-copy:hover {{
+            background: rgba(128,128,128,0.16);
+        }}
+
+        .suggestion-hex-label {{
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: 800;
+        }}
+
+        .settings-section-label {{
+            font-size: 11px;
+            font-weight: 800;
+            opacity: 0.75;
+            margin-top: 4px;
+        }}
+
+        .settings-button-row {{
+            min-height: 28px;
+        }}
+
+        .settings-option-button,
+        .settings-data-button {{
+            border-radius: 6px;
+            background: transparent;
+            padding: 3px 9px;
+            font-size: 11px;
+            font-weight: 700;
+        }}
+
+        .settings-option-button:hover,
+        .settings-data-button:hover {{
+            background: rgba(128,128,128,0.16);
+        }}
+
+        .settings-option-button.settings-option-active {{
+            background: #2d2f2f;
+            color: #ffffff;
+        }}
+
         .saved-section-label {{
             font-size: 11px;
             font-weight: 800;
@@ -179,6 +273,12 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             margin-top: 0;
         }}
 
+        .palette-label {{
+            font-size: 11px;
+            font-weight: 800;
+            opacity: 0.78;
+        }}
+
         .palette-color-button {{
             border-radius: 999px;
             background: transparent;
@@ -190,7 +290,7 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         }}
 
         .palette-empty-label {{
-            min-height: 24px;
+            min-height: 26px;
         }}
 
         scale trough {{
@@ -222,6 +322,11 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         text_color,
         border_color,
         panel_color,
+        border_color,
+        panel_color,
+        border_color,
+        panel_color,
+        border_color,
         border_color,
         border_color,
         panel_color,

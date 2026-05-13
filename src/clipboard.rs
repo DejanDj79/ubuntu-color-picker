@@ -11,15 +11,25 @@ pub struct CopyFeedback {
     toast: gtk::Box,
     toast_label: gtk::Label,
     generation: Rc<Cell<u32>>,
+    duration_ms: Rc<Cell<u64>>,
 }
 
 impl CopyFeedback {
-    pub fn new(toast: &gtk::Box, toast_label: &gtk::Label) -> Self {
+    pub fn new(toast: &gtk::Box, toast_label: &gtk::Label, duration_ms: u64) -> Self {
         Self {
             toast: toast.clone(),
             toast_label: toast_label.clone(),
             generation: Rc::new(Cell::new(0)),
+            duration_ms: Rc::new(Cell::new(duration_ms)),
         }
+    }
+
+    pub fn set_duration_ms(&self, duration_ms: u64) {
+        self.duration_ms.set(duration_ms);
+    }
+
+    pub fn show_message(&self, text: &str) {
+        self.show(text);
     }
 
     fn show(&self, text: &str) {
@@ -32,7 +42,8 @@ impl CopyFeedback {
         let toast = self.toast.clone();
         let toast_label = self.toast_label.clone();
         let current_generation = self.generation.clone();
-        gtk::glib::timeout_add_local_once(Duration::from_secs(2), move || {
+        let duration = Duration::from_millis(self.duration_ms.get());
+        gtk::glib::timeout_add_local_once(duration, move || {
             if current_generation.get() == generation {
                 toast_label.set_text("");
                 toast.set_visible(false);

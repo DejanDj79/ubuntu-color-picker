@@ -1,8 +1,12 @@
+mod about;
+mod app_icon;
 mod clipboard;
 mod color;
 mod saved_colors;
+mod settings;
 mod storage;
 mod style;
+mod suggestions;
 mod widgets;
 
 use adw::prelude::*;
@@ -14,8 +18,10 @@ use std::rc::Rc;
 use clipboard::{copy_color, CopyFeedback};
 use color::{parse_rgb_channel, CopyFormat, Rgb};
 use saved_colors::SavedColorsPanel;
+use settings::SettingsPanel;
 use storage::ColorCollections;
 use style::load_css;
+use suggestions::SuggestionsPanel;
 use widgets::{
     copy_format_popover, copy_toast, icon_button, make_hex_entry, make_scale, make_value_entry,
     menu_icon_button, slider_row, window_button,
@@ -71,6 +77,8 @@ async fn main() {
 }
 
 fn build_ui(app: &adw::Application) {
+    app_icon::register();
+
     let color_state = ColorState::new(INITIAL_COLOR);
     let current_color = Rc::new(Cell::new(INITIAL_COLOR));
     let collections = Rc::new(RefCell::new(ColorCollections::load()));
@@ -78,6 +86,7 @@ fn build_ui(app: &adw::Application) {
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .title("Color Picker")
+        .icon_name(app_icon::APP_ICON_NAME)
         .default_width(520)
         .default_height(282)
         .resizable(false)
@@ -85,6 +94,7 @@ fn build_ui(app: &adw::Application) {
 
     let root = gtk::Box::builder()
         .orientation(Orientation::Vertical)
+        .width_request(520)
         .build();
 
     root.add_css_class("app-bg");
@@ -92,6 +102,10 @@ fn build_ui(app: &adw::Application) {
     let overlay = gtk::Overlay::new();
     let (copy_toast, copy_toast_label) = copy_toast();
     overlay.add_overlay(&copy_toast);
+
+    let app_surface = gtk::Box::builder()
+        .orientation(Orientation::Horizontal)
+        .build();
 
     let top_bar = gtk::Box::builder()
         .orientation(Orientation::Horizontal)
@@ -106,11 +120,15 @@ fn build_ui(app: &adw::Application) {
     top_bar.add_css_class("top-bar");
 
     let picker_btn = icon_button("color-select-symbolic", "Pick color");
-    let sliders_btn = icon_button("view-list-symbolic", "RGB sliders");
     let favorite_btn = icon_button("non-starred-symbolic", "Add favorite");
     let palette_btn = icon_button("list-add-symbolic", "Add to palette");
+    let suggestions_btn = icon_button("preferences-color-symbolic", "Color suggestions");
     let saved_btn = icon_button("user-bookmarks-symbolic", "Favorites");
-    let copy_feedback = CopyFeedback::new(&copy_toast, &copy_toast_label);
+    let copy_feedback = CopyFeedback::new(
+        &copy_toast,
+        &copy_toast_label,
+        collections.borrow().settings().toast_duration().millis(),
+    );
     let copy_action: Rc<dyn Fn(CopyFormat)> = {
         let color_state = color_state.clone();
         let copy_feedback = copy_feedback.clone();
@@ -123,14 +141,16 @@ fn build_ui(app: &adw::Application) {
     let copy_popover = copy_format_popover(copy_action);
     let copy_btn = menu_icon_button("edit-copy-symbolic", "Copy color", &copy_popover);
     let settings_btn = icon_button("emblem-system-symbolic", "Settings");
+    let about_btn = icon_button("help-about-symbolic", "About");
 
     top_bar.append(&picker_btn);
-    top_bar.append(&sliders_btn);
     top_bar.append(&favorite_btn);
-    top_bar.append(&palette_btn);
     top_bar.append(&saved_btn);
+    top_bar.append(&palette_btn);
+    top_bar.append(&suggestions_btn);
     top_bar.append(&copy_btn);
     top_bar.append(&settings_btn);
+    top_bar.append(&about_btn);
 
     let spacer = gtk::Box::builder().hexpand(true).build();
     top_bar.append(&spacer);
@@ -161,6 +181,14 @@ fn build_ui(app: &adw::Application) {
         let window = window.clone();
         close_btn.connect_clicked(move |_| {
             window.close();
+        });
+    }
+
+    {
+        let app = app.clone();
+        let window = window.clone();
+        about_btn.connect_clicked(move |_| {
+            about::show(&window, &app);
         });
     }
 
@@ -241,8 +269,11 @@ fn build_ui(app: &adw::Application) {
 
     load_css(&css_provider, color_state.get());
 
+    let suggestions_panel_ref: Rc<RefCell<Option<SuggestionsPanel>>> = Rc::new(RefCell::new(None));
+
     let saved_panel = {
         let color_state = color_state.clone();
+        let suggestions_panel_ref = suggestions_panel_ref.clone();
 
         let r_scale = r_scale.clone();
         let g_scale = g_scale.clone();
@@ -275,6 +306,10 @@ fn build_ui(app: &adw::Application) {
                     &hex_entry,
                     &css_provider,
                 );
+
+                if let Some(panel) = suggestions_panel_ref.borrow().as_ref() {
+                    panel.set_current(color);
+                }
             }),
         )
     };
@@ -282,7 +317,62 @@ fn build_ui(app: &adw::Application) {
     content.append(&saved_panel.palette_widget());
     root.append(&saved_panel.favorites_widget());
 
+    let suggestions_panel = {
+        let color_state = color_state.clone();
+
+        let r_scale = r_scale.clone();
+        let g_scale = g_scale.clone();
+        let b_scale = b_scale.clone();
+
+        let r_entry = r_entry.clone();
+        let g_entry = g_entry.clone();
+        let b_entry = b_entry.clone();
+        let hex_entry = hex_entry.clone();
+
+        let css_provider = css_provider.clone();
+        let saved_panel = saved_panel.clone();
+
+        SuggestionsPanel::new(
+            current_color.clone(),
+            suggestions_btn.clone(),
+            copy_feedback.clone(),
+            Rc::new(move |color| {
+                apply_selected_color(
+                    color,
+                    &color_state,
+                    &r_scale,
+                    &g_scale,
+                    &b_scale,
+                    &r_entry,
+                    &g_entry,
+                    &b_entry,
+                    &hex_entry,
+                    &css_provider,
+                );
+                saved_panel.set_current(color);
+            }),
+        )
+    };
+
+    *suggestions_panel_ref.borrow_mut() = Some(suggestions_panel.clone());
+    app_surface.append(&suggestions_panel.suggestions_widget());
+
+    let settings_panel = {
+        let saved_panel = saved_panel.clone();
+        SettingsPanel::new(
+            collections.clone(),
+            settings_btn.clone(),
+            copy_feedback.clone(),
+            Rc::new(move || {
+                saved_panel.refresh();
+            }),
+        )
+    };
+
+    root.append(&settings_panel.settings_widget());
+
     saved_panel.set_current(color_state.get());
+    suggestions_panel.set_current(color_state.get());
 
     r_scale.set_value(INITIAL_COLOR.r as f64);
     g_scale.set_value(INITIAL_COLOR.g as f64);
@@ -297,6 +387,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
         ColorChannel::Red,
     );
 
@@ -309,6 +400,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
         ColorChannel::Green,
     );
 
@@ -321,6 +413,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
         ColorChannel::Blue,
     );
 
@@ -336,6 +429,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
         ColorChannel::Red,
     );
 
@@ -351,6 +445,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
         ColorChannel::Green,
     );
 
@@ -366,6 +461,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
         ColorChannel::Blue,
     );
 
@@ -381,6 +477,7 @@ fn build_ui(app: &adw::Application) {
         hex_entry.clone(),
         css_provider.clone(),
         saved_panel.clone(),
+        suggestions_panel.clone(),
     );
 
     {
@@ -397,6 +494,7 @@ fn build_ui(app: &adw::Application) {
 
         let css_provider = css_provider.clone();
         let saved_panel = saved_panel.clone();
+        let suggestions_panel = suggestions_panel.clone();
 
         picker_btn.connect_clicked(move |_| {
             let color_state = color_state.clone();
@@ -412,6 +510,7 @@ fn build_ui(app: &adw::Application) {
 
             let css_provider = css_provider.clone();
             let saved_panel = saved_panel.clone();
+            let suggestions_panel = suggestions_panel.clone();
 
             glib::MainContext::default().spawn_local(async move {
                 match Color::pick()
@@ -435,6 +534,7 @@ fn build_ui(app: &adw::Application) {
                             &css_provider,
                         );
                         saved_panel.set_current(color);
+                        suggestions_panel.set_current(color);
                     }
                     Err(error) => {
                         hex_entry.set_text(&format!("Error: {}", error));
@@ -444,7 +544,8 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
-    overlay.set_child(Some(&root));
+    app_surface.prepend(&root);
+    overlay.set_child(Some(&app_surface));
     window.set_content(Some(&overlay));
     window.present();
 }
@@ -481,6 +582,7 @@ fn connect_rgb_entry(
     hex_entry: Entry,
     css_provider: Rc<gtk::CssProvider>,
     saved_panel: SavedColorsPanel,
+    suggestions_panel: SuggestionsPanel,
     channel: ColorChannel,
 ) {
     entry.connect_changed(move |entry| {
@@ -517,6 +619,7 @@ fn connect_rgb_entry(
             &css_provider,
         );
         saved_panel.set_current(color);
+        suggestions_panel.set_current(color);
 
         restore_entry_position(entry, cursor_position);
     });
@@ -534,6 +637,7 @@ fn connect_hex_entry(
     hex_entry: Entry,
     css_provider: Rc<gtk::CssProvider>,
     saved_panel: SavedColorsPanel,
+    suggestions_panel: SuggestionsPanel,
 ) {
     entry.connect_changed(move |entry| {
         if color_state.is_syncing() {
@@ -567,6 +671,7 @@ fn connect_hex_entry(
             &css_provider,
         );
         saved_panel.set_current(color);
+        suggestions_panel.set_current(color);
 
         restore_entry_position(entry, cursor_position);
     });
@@ -594,6 +699,7 @@ fn connect_slider(
     hex_entry: Entry,
     css_provider: Rc<gtk::CssProvider>,
     saved_panel: SavedColorsPanel,
+    suggestions_panel: SuggestionsPanel,
     channel: ColorChannel,
 ) {
     scale.connect_value_changed(move |scale| {
@@ -621,6 +727,7 @@ fn connect_slider(
             &css_provider,
         );
         saved_panel.set_current(color);
+        suggestions_panel.set_current(color);
     });
 }
 

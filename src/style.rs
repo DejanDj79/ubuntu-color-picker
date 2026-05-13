@@ -39,8 +39,20 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             padding-right: 10px;
         }}
 
-        .toolbar-button,
+        .toolbar-button {{
+            min-width: 34px;
+            min-height: 34px;
+            border-radius: 6px;
+            background: transparent;
+            color: {};
+            border: none;
+            padding: 0;
+            box-shadow: none;
+        }}
+
         .window-button {{
+            min-width: 42px;
+            min-height: 42px;
             border-radius: 0;
             background: transparent;
             color: {};
@@ -49,16 +61,27 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             box-shadow: none;
         }}
 
-        .toolbar-button:hover,
+        .toolbar-button:hover {{
+            min-width: 34px;
+            min-height: 34px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.16);
+        }}
+
         .window-button:hover {{
+            min-width: 42px;
+            min-height: 42px;
+            border-radius: 0;
             background: rgba(255,255,255,0.16);
         }}
 
         .toolbar-button.favorite-active {{
+            border-radius: 6px;
             background: rgba(255,255,255,0.22);
         }}
 
         .toolbar-button.palette-active {{
+            border-radius: 6px;
             background: rgba(255,255,255,0.22);
         }}
 
@@ -181,6 +204,7 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         hex,
         text_color,
         border_color,
+        text_color,
         text_color,
         text_color,
         panel_color,

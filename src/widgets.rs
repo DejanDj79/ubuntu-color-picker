@@ -36,8 +36,8 @@ pub fn menu_icon_button(icon_name: &str, tooltip: &str, popover: &Popover) -> Me
 pub fn window_button(label: &str) -> Button {
     let button = Button::builder()
         .label(label)
-        .width_request(34)
-        .height_request(30)
+        .width_request(42)
+        .height_request(42)
         .build();
 
     button.add_css_class("window-button");

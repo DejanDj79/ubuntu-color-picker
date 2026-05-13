@@ -168,9 +168,15 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
-    top_bar.append(&minimize_btn);
-    top_bar.append(&maximize_btn);
-    top_bar.append(&close_btn);
+    let window_controls = gtk::Box::builder()
+        .orientation(Orientation::Horizontal)
+        .spacing(0)
+        .build();
+
+    window_controls.append(&minimize_btn);
+    window_controls.append(&maximize_btn);
+    window_controls.append(&close_btn);
+    top_bar.append(&window_controls);
 
     let content = gtk::Box::builder()
         .orientation(Orientation::Vertical)

@@ -36,15 +36,15 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         .top-bar {{
             border-bottom: 1px solid {};
             padding-left: 10px;
-            padding-right: 10px;
+            padding-right: 0;
         }}
 
         .toolbar-button {{
-            width: 30px;
-            height: 30px;
+            min-width: 30px;
+            min-height: 30px;
             border-radius: 6px;
             background: transparent;
-            color: {};
+            color: #2d2f2f;
             border: none;
             padding: 0;
             box-shadow: none;
@@ -65,24 +65,28 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             min-width: 30px;
             min-height: 30px;
             border-radius: 6px;
-            background: rgba(255,255,255,0.16);
+            background: #2d2f2f;
+            color: #ffffff;
         }}
 
         .window-button:hover {{
             min-width: 42px;
             min-height: 42px;
             border-radius: 0;
-            background: rgba(255,255,255,0.16);
+            background: #2d2f2f;
+            color: #ffffff;
         }}
 
         .toolbar-button.favorite-active {{
             border-radius: 6px;
-            background: rgba(255,255,255,0.22);
+            background: #2d2f2f;
+            color: #ffffff;
         }}
 
         .toolbar-button.palette-active {{
             border-radius: 6px;
-            background: rgba(255,255,255,0.22);
+            background: #2d2f2f;
+            color: #ffffff;
         }}
 
         .channel-label {{
@@ -204,7 +208,6 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         hex,
         text_color,
         border_color,
-        text_color,
         text_color,
         text_color,
         panel_color,

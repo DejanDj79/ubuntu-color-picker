@@ -109,11 +109,7 @@ fn build_ui(app: &adw::Application) {
     let sliders_btn = icon_button("view-list-symbolic", "RGB sliders");
     let favorite_btn = icon_button("non-starred-symbolic", "Add favorite");
     let palette_btn = icon_button("list-add-symbolic", "Add to palette");
-    let saved_popover = gtk::Popover::builder()
-        .autohide(true)
-        .has_arrow(true)
-        .build();
-    let saved_btn = menu_icon_button("user-bookmarks-symbolic", "Favorites", &saved_popover);
+    let saved_btn = icon_button("user-bookmarks-symbolic", "Favorites");
     let copy_feedback = CopyFeedback::new(&copy_toast, &copy_toast_label);
     let copy_action: Rc<dyn Fn(CopyFormat)> = {
         let color_state = color_state.clone();
@@ -260,11 +256,11 @@ fn build_ui(app: &adw::Application) {
         let css_provider = css_provider.clone();
 
         SavedColorsPanel::new(
-            saved_popover.clone(),
             collections.clone(),
             current_color.clone(),
             favorite_btn.clone(),
             palette_btn.clone(),
+            saved_btn.clone(),
             copy_feedback.clone(),
             Rc::new(move |color| {
                 apply_selected_color(
@@ -284,6 +280,7 @@ fn build_ui(app: &adw::Application) {
     };
 
     content.append(&saved_panel.palette_widget());
+    root.append(&saved_panel.favorites_widget());
 
     saved_panel.set_current(color_state.get());
 

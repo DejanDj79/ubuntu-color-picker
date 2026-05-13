@@ -89,6 +89,12 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
             color: #ffffff;
         }}
 
+        .toolbar-button.panel-active {{
+            border-radius: 6px;
+            background: #2d2f2f;
+            color: #ffffff;
+        }}
+
         .channel-label {{
             font-weight: 700;
             color: {};
@@ -131,7 +137,9 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         }}
 
         .saved-colors-root {{
-            min-width: 230px;
+            background: {};
+            border-top: 1px solid {};
+            padding: 10px 18px 12px 18px;
         }}
 
         .saved-section-label {{
@@ -212,6 +220,8 @@ pub fn load_css(provider: &gtk::CssProvider, color: Rgb) {
         text_color,
         panel_color,
         text_color,
+        border_color,
+        panel_color,
         border_color,
         border_color,
         panel_color,

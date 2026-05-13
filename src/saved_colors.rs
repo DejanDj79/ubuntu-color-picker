@@ -2,7 +2,7 @@ use crate::clipboard::{copy_color, CopyFeedback};
 use crate::color::{CopyFormat, Rgb};
 use crate::storage::ColorCollections;
 use gtk::prelude::*;
-use gtk::{Align, Button, Label, Orientation, Popover};
+use gtk::{Align, Button, Label, Orientation};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -10,9 +10,11 @@ use std::rc::Rc;
 pub struct SavedColorsPanel {
     storage: Rc<RefCell<ColorCollections>>,
     current_color: Rc<Cell<Rgb>>,
-    popover: Popover,
     favorite_button: Button,
     palette_button: Button,
+    panel_button: Button,
+    slide_revealer: gtk::Revealer,
+    fade_revealer: gtk::Revealer,
     favorites_box: gtk::Box,
     palette_root: gtk::Box,
     palette_colors_box: gtk::Box,
@@ -22,11 +24,11 @@ pub struct SavedColorsPanel {
 
 impl SavedColorsPanel {
     pub fn new(
-        popover: Popover,
         storage: Rc<RefCell<ColorCollections>>,
         current_color: Rc<Cell<Rgb>>,
         favorite_button: Button,
         palette_button: Button,
+        panel_button: Button,
         copy_feedback: CopyFeedback,
         on_select: Rc<dyn Fn(Rgb)>,
     ) -> Self {
@@ -49,7 +51,18 @@ impl SavedColorsPanel {
 
         root.append(&favorites_label);
         root.append(&favorites_box);
-        popover.set_child(Some(&root));
+
+        let fade_revealer = gtk::Revealer::builder()
+            .transition_duration(180)
+            .transition_type(gtk::RevealerTransitionType::Crossfade)
+            .build();
+        fade_revealer.set_child(Some(&root));
+
+        let slide_revealer = gtk::Revealer::builder()
+            .transition_duration(220)
+            .transition_type(gtk::RevealerTransitionType::SlideDown)
+            .build();
+        slide_revealer.set_child(Some(&fade_revealer));
 
         let palette_root = gtk::Box::builder()
             .orientation(Orientation::Horizontal)
@@ -70,9 +83,11 @@ impl SavedColorsPanel {
         let panel = Self {
             storage,
             current_color,
-            popover,
             favorite_button,
             palette_button,
+            panel_button,
+            slide_revealer,
+            fade_revealer,
             favorites_box,
             palette_root,
             palette_colors_box,
@@ -96,8 +111,20 @@ impl SavedColorsPanel {
             });
         }
 
+        {
+            let panel = panel.clone();
+            let panel_button = panel.panel_button.clone();
+            panel_button.connect_clicked(move |_| {
+                panel.toggle_panel();
+            });
+        }
+
         panel.refresh();
         panel
+    }
+
+    pub fn favorites_widget(&self) -> gtk::Revealer {
+        self.slide_revealer.clone()
     }
 
     pub fn palette_widget(&self) -> gtk::Box {
@@ -177,10 +204,25 @@ impl SavedColorsPanel {
         populate_palette(&self.palette_colors_box, storage.palette(), self.clone());
     }
 
+    fn toggle_panel(&self) {
+        self.set_panel_visible(!self.slide_revealer.reveals_child());
+    }
+
+    fn set_panel_visible(&self, visible: bool) {
+        self.fade_revealer.set_reveal_child(visible);
+        self.slide_revealer.set_reveal_child(visible);
+
+        if visible {
+            self.panel_button.add_css_class("panel-active");
+        } else {
+            self.panel_button.remove_css_class("panel-active");
+        }
+    }
+
     fn select_color(&self, color: Rgb) {
         (self.on_select)(color);
         self.set_current(color);
-        self.popover.popdown();
+        self.set_panel_visible(false);
     }
 
     fn copy_color(&self, source: &Button, color: Rgb) {
